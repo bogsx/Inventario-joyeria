@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Inventario Joyería Mobile</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gold: {
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                        },
+                        slate: {
+                            850: '#151f32',
+                            950: '#0b1120'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.3);
+            border-radius: 4px;
+        }
+        .pb-safe {
+            padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex justify-center selection:bg-gold-500 selection:text-slate-950">
+
+    <!-- Mobile Frame Wrapper -->
+    <div class="w-full max-w-md min-h-screen bg-slate-900 border-x border-slate-800 flex flex-col relative shadow-2xl overflow-x-hidden">
+
+        <!-- Top Header App Bar -->
+        <header class="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800/80 px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-gold-600 via-yellow-400 to-amber-200 p-0.5 shadow-lg shadow-gold-500/10">
+                    <div class="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
+                        <i data-lucide="gem" class="w-5 h-5 text-gold-400"></i>
+                    </div>
+                </div>
+                <div>
+                    <h1 class="font-bold text-base tracking-wide text-slate-100 leading-tight">Joyería Control</h1>
+                    <p class="text-[11px] text-slate-400 font-medium">Gestión con Foto & IndexedDB</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <span id="badge-total-items" class="px-2.5 py-1 bg-slate-800 border border-slate-700/80 rounded-full text-xs font-semibold text-gold-400 flex items-center gap-1">
+                    <i data-lucide="box" class="w-3.5 h-3.5"></i> <span id="header-count">0</span> ítems
+                </span>
+            </div>
+        </header>
+
+        <!-- Main Content View Area -->
+        <main class="flex-1 px-4 py-4 pb-safe overflow-y-auto">
+
+            <!-- TAB 1: INVENTARIO (Listado y Métricas) -->
+            <section id="view-inventario" class="space-y-4">
+                
+                <!-- Financial & Quantity KPI Cards -->
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div class="bg-slate-850 border border-slate-800 rounded-2xl p-3.5 shadow-sm">
+                        <div class="flex items-center justify-between text-slate-400 mb-1">
+                            <span class="text-xs font-medium">Stock Total</span>
+                            <i data-lucide="layers" class="w-4 h-4 text-cyan-400"></i>
+                        </div>
+                        <div class="text-xl font-bold text-slate-100" id="stat-total-stock">0</div>
+                        <span class="text-[10px] text-slate-400">unidades físicas</span>
+                    </div>
+
+                    <div class="bg-slate-850 border border-slate-800 rounded-2xl p-3.5 shadow-sm">
+                        <div class="flex items-center justify-between text-slate-400 mb-1">
+                            <span class="text-xs font-medium">Valor Venta</span>
+                            <i data-lucide="badge-dollar-sign" class="w-4 h-4 text-emerald-400"></i>
+                        </div>
+                        <div class="text-xl font-bold text-emerald-400" id="stat-total-venta">$0</div>
+                        <span class="text-[10px] text-slate-400">inversión: <span id="stat-total-compra" class="text-slate-300">$0</span></span>
+                    </div>
+                </div>
+
+                <!-- Search & Filters -->
+                <div class="space-y-2">
+                    <div class="relative">
+                        <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="text" id="search-input" placeholder="Buscar estilo, material, color, medidas..." 
+                            class="w-full pl-10 pr-9 py-2.5 bg-slate-850 border border-slate-700/60 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-gold-500 transition-colors">
+                        <button id="btn-clear-search" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+
+                    <!-- Family Quick Filters Pills -->
+                    <div class="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs font-medium" id="family-pills">
+                        <button data-family="TODAS" class="pill-btn active px-3 py-1.5 rounded-xl bg-gold-500 text-slate-950 font-semibold whitespace-nowrap transition-all shadow-sm">
+                            Todas
+                        </button>
+                        <button data-family="Cadena" class="pill-btn px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 border border-slate-700/70 whitespace-nowrap hover:bg-slate-700 transition-all">
+                            Cadenas
+                        </button>
+                        <button data-family="Pulsera" class="pill-btn px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 border border-slate-700/70 whitespace-nowrap hover:bg-slate-700 transition-all">
+                            Pulseras
+                        </button>
+                        <button data-family="Anillo" class="pill-btn px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 border border-slate-700/70 whitespace-nowrap hover:bg-slate-700 transition-all">
+                            Anillos
+                        </button>
+                        <button data-family="Aros" class="pill-btn px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 border border-slate-700/70 whitespace-nowrap hover:bg-slate-700 transition-all">
+                            Aros
+                        </button>
+                        <button data-family="Colgante" class="pill-btn px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 border border-slate-700/70 whitespace-nowrap hover:bg-slate-700 transition-all">
+                            Colgantes
+                        </button>
+                        <button data-family="Tobillera" class="pill-btn px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 border border-slate-700/70 whitespace-nowrap hover:bg-slate-700 transition-all">
+                            Tobilleras
+                        </button>
+                        <button data-family="Otro" class="pill-btn px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 border border-slate-700/70 whitespace-nowrap hover:bg-slate-700 transition-all">
+                            Otros
+                        </button>
+                    </div>
+                </div>
+
+                <!-- List Items Container -->
+                <div id="inventory-list" class="space-y-3 min-h-[220px]">
+                    <!-- Items rendered dynamically -->
+                </div>
+
+                <!-- Empty State -->
+                <div id="empty-state" class="hidden flex-col items-center justify-center py-12 text-center text-slate-400 space-y-3 bg-slate-850/40 rounded-2xl border border-dashed border-slate-800 p-6">
+                    <div class="w-14 h-14 rounded-full bg-slate-800 flex items-center justify-center text-slate-500">
+                        <i data-lucide="package-open" class="w-7 h-7"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-semibold text-slate-200">No hay productos guardados</h3>
+                        <p class="text-xs text-slate-400 mt-1">Usa la pestaña "Nuevo" para ingresar joyas con foto al sistema.</p>
+                    </div>
+                    <button id="btn-go-new" class="mt-2 px-4 py-2 bg-gold-500 hover:bg-gold-600 text-slate-950 text-xs font-bold rounded-xl flex items-center gap-2">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Crear primer producto
+                    </button>
+                </div>
+            </section>
+
+            <!-- TAB 2: NUEVO / EDITAR PRODUCTO -->
+            <section id="view-nuevo" class="hidden space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <div>
+                        <h2 id="form-title" class="text-base font-bold text-slate-100">Agregar Nueva Joya</h2>
+                        <p class="text-xs text-slate-400">Captura la foto y completa los 11 campos</p>
+                    </div>
+                    <button id="btn-cancel-edit" class="hidden px-2.5 py-1 text-xs bg-slate-800 text-slate-300 hover:text-white rounded-lg border border-slate-700">
+                        Cancelar edición
+                    </button>
+                </div>
+
+                <form id="product-form" class="space-y-3.5">
+                    <input type="hidden" id="field-id">
+
+                    <!-- SECCIÓN FOTO DE IDENTIFICACIÓN -->
+                    <div class="bg-slate-850 p-3.5 rounded-2xl border border-slate-800 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+                                <i data-lucide="camera" class="w-4 h-4 text-gold-400"></i> Foto de Identificación
+                            </span>
+                            <span id="photo-status-tag" class="text-[10px] text-slate-400 bg-slate-900 px-2 py-0.5 rounded-full border border-slate-800">
+                                Opcional
+                            </span>
+                        </div>
+
+                        <!-- Hidden File Inputs -->
+                        <input type="file" id="input-camera" accept="image/*" capture="environment" class="hidden">
+                        <input type="file" id="input-gallery" accept="image/*" class="hidden">
+
+                        <!-- Photo Display Preview Box -->
+                        <div class="flex gap-3 items-center">
+                            <div id="photo-preview-container" class="w-24 h-24 rounded-xl bg-slate-900 border border-slate-700 flex flex-col items-center justify-center overflow-hidden relative shrink-0">
+                                <div id="photo-placeholder" class="flex flex-col items-center justify-center text-slate-500 p-2 text-center">
+                                    <i data-lucide="image" class="w-7 h-7 mb-1 stroke-1"></i>
+                                    <span class="text-[9px]">Sin foto</span>
+                                </div>
+                                <img id="photo-img-preview" class="w-full h-full object-cover hidden" alt="Vista previa">
+                                <button type="button" id="btn-remove-photo" class="hidden absolute top-1 right-1 p-1 bg-slate-950/80 hover:bg-rose-600 text-white rounded-full transition-colors">
+                                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+
+                            <!-- Buttons: Camera & Gallery -->
+                            <div class="flex-1 space-y-2">
+                                <button type="button" id="btn-trigger-camera" class="w-full py-2 px-3 bg-slate-800 hover:bg-slate-700 active:scale-[0.98] border border-slate-700 rounded-xl text-xs font-semibold text-gold-400 flex items-center justify-center gap-2 transition-all">
+                                    <i data-lucide="camera" class="w-4 h-4"></i> Tomar Foto
+                                </button>
+                                <button type="button" id="btn-trigger-gallery" class="w-full py-2 px-3 bg-slate-800 hover:bg-slate-700 active:scale-[0.98] border border-slate-700 rounded-xl text-xs font-semibold text-slate-200 flex items-center justify-center gap-2 transition-all">
+                                    <i data-lucide="image-plus" class="w-4 h-4"></i> Subir de Galería
+                                </button>
+                                <p class="text-[10px] text-slate-400 leading-tight">Compresión automática inteligente en el dispositivo (max 500px JPEG).</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Clasificación básica -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">Familia *</label>
+                            <select id="field-familia" required class="w-full px-3 py-2.5 bg-slate-850 border border-slate-700/80 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-gold-500">
+                                <option value="Cadena">Cadena</option>
+                                <option value="Pulsera">Pulsera</option>
+                                <option value="Anillo">Anillo</option>
+                                <option value="Aros">Aros</option>
+                                <option value="Colgante">Colgante</option>
+                                <option value="Tobillera">Tobillera</option>
+                                <option value="Otro">Otro</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">Estilo *</label>
+                            <input type="text" id="field-estilo" placeholder="Ej: Barbada, Figaro, Cubana" required
+                                class="w-full px-3 py-2.5 bg-slate-850 border border-slate-700/80 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-gold-500">
+                        </div>
+                    </div>
+
+                    <!-- Dimensiones -->
+                    <div class="bg-slate-850/60 p-3 rounded-xl border border-slate-800 space-y-3">
+                        <span class="text-[11px] font-bold tracking-wider uppercase text-slate-400 block">Dimensiones & Medidas</span>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <label class="block text-[11px] font-medium text-slate-400 mb-1">Largo</label>
+                                <input type="text" id="field-largo" placeholder="ej: 50 cm" 
+                                    class="w-full px-2.5 py-2 bg-slate-900 border border-slate-700/70 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-gold-500">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-medium text-slate-400 mb-1">Ancho</label>
+                                <input type="text" id="field-ancho" placeholder="ej: 4 mm" 
+                                    class="w-full px-2.5 py-2 bg-slate-900 border border-slate-700/70 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-gold-500">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-medium text-slate-400 mb-1">Grosor</label>
+                                <input type="text" id="field-grosor" placeholder="ej: 2 mm" 
+                                    class="w-full px-2.5 py-2 bg-slate-900 border border-slate-700/70 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-gold-500">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Material, Género & Color -->
+                    <div class="grid grid-cols-3 gap-2">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">Material *</label>
+                            <input type="text" id="field-material" list="list-materiales" placeholder="Ej: Plata 925" required
+                                class="w-full px-2.5 py-2.5 bg-slate-850 border border-slate-700/80 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-gold-500">
+                            <datalist id="list-materiales">
+                                <option value="Plata 925"></option>
+                                <option value="Oro 18k"></option>
+                                <option value="Oro 14k"></option>
+                                <option value="Acero Quirúrgico"></option>
+                                <option value="Baño de Oro"></option>
+                                <option value="Plata Inflada"></option>
+                            </datalist>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">Género *</label>
+                            <select id="field-genero" required class="w-full px-2 py-2.5 bg-slate-850 border border-slate-700/80 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-gold-500">
+                                <option value="Unisex">Unisex</option>
+                                <option value="Hombre">Hombre</option>
+                                <option value="Mujer">Mujer</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">Color *</label>
+                            <input type="text" id="field-color" list="list-colores" placeholder="Plateado" required
+                                class="w-full px-2.5 py-2.5 bg-slate-850 border border-slate-700/80 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-gold-500">
+                            <datalist id="list-colores">
+                                <option value="Plateado"></option>
+                                <option value="Dorado"></option>
+                                <option value="Oro Rosa"></option>
+                                <option value="Negro"></option>
+                                <option value="Bicolor"></option>
+                            </datalist>
+                        </div>
+                    </div>
+
+                    <!-- Cantidad y Precios -->
+                    <div class="bg-slate-850/60 p-3 rounded-xl border border-slate-800 space-y-3">
+                        <span class="text-[11px] font-bold tracking-wider uppercase text-slate-400 block">Inventario & Valores ($)</span>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <label class="block text-[11px] font-medium text-slate-300 mb-1">Cantidad *</label>
+                                <input type="number" id="field-cantidad" min="0" value="1" step="1" required
+                                    class="w-full px-2.5 py-2 bg-slate-900 border border-slate-700/70 rounded-lg text-xs font-semibold text-slate-100 focus:outline-none focus:border-gold-500 text-center">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-medium text-slate-300 mb-1">P. Compra *</label>
+                                <input type="number" id="field-preciocompra" min="0" step="0.01" placeholder="0.00" required
+                                    class="w-full px-2.5 py-2 bg-slate-900 border border-slate-700/70 rounded-lg text-xs text-slate-100 focus:outline-none focus:border-gold-500">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-medium text-slate-300 mb-1">P. Venta *</label>
+                                <input type="number" id="field-precioventa" min="0" step="0.01" placeholder="0.00" required
+                                    class="w-full px-2.5 py-2 bg-slate-900 border border-slate-700/70 rounded-lg text-xs font-semibold text-emerald-400 focus:outline-none focus:border-gold-500">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="pt-2">
+                        <button type="submit" id="btn-submit-form" 
+                            class="w-full py-3.5 bg-gradient-to-r from-gold-500 to-amber-500 hover:from-gold-600 hover:to-amber-600 active:scale-[0.99] text-slate-950 font-bold text-sm rounded-xl shadow-lg shadow-gold-500/20 flex items-center justify-center gap-2 transition-all">
+                            <i data-lucide="save" class="w-4 h-4"></i>
+                            <span id="btn-submit-text">Guardar en Inventario</span>
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- TAB 3: EXPORTAR / IMPORTAR TXT & RESPALDOS -->
+            <section id="view-exportar" class="hidden space-y-4">
+                
+                <!-- SECCIÓN EXCEL TXT -->
+                <div class="bg-gradient-to-br from-slate-850 to-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                            <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-sm font-bold text-slate-100">Exportar para Excel (.txt)</h2>
+                            <p class="text-xs text-slate-400">Exportación limpia de los 11 campos ordenados (sin texto de imagen)</p>
+                        </div>
+                    </div>
+
+                    <!-- Separador selection -->
+                    <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800 space-y-2">
+                        <label class="block text-xs font-semibold text-slate-300">Selecciona Separador de Columnas:</label>
+                        <div class="grid grid-cols-2 gap-2 text-xs">
+                            <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-850 border border-slate-700/60 cursor-pointer hover:border-gold-500/60 transition-colors">
+                                <input type="radio" name="delimiter" value="tab" checked class="text-gold-500 focus:ring-0">
+                                <div>
+                                    <span class="font-medium text-slate-200 block">Tabulación (\t)</span>
+                                    <span class="text-[10px] text-slate-400">Recomendado Excel</span>
+                                </div>
+                            </label>
+                            <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-850 border border-slate-700/60 cursor-pointer hover:border-gold-500/60 transition-colors">
+                                <input type="radio" name="delimiter" value="semicolon" class="text-gold-500 focus:ring-0">
+                                <div>
+                                    <span class="font-medium text-slate-200 block">Punto y Coma (;)</span>
+                                    <span class="text-[10px] text-slate-400">Formato Estándar CSV</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="space-y-2 pt-1">
+                        <button id="btn-download-txt" 
+                            class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 active:scale-[0.99] text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-900/30 flex items-center justify-center gap-2 transition-all">
+                            <i data-lucide="download" class="w-4 h-4"></i> Descargar inventario.txt (UTF-8 con BOM)
+                        </button>
+
+                        <button id="btn-copy-txt" 
+                            class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 active:scale-[0.99] text-slate-200 font-semibold text-xs rounded-xl border border-slate-700/80 flex items-center justify-center gap-2 transition-all">
+                            <i data-lucide="copy" class="w-4 h-4 text-gold-400"></i> Copiar al Portapapeles (para pegar directo)
+                        </button>
+                    </div>
+
+                    <!-- TXT Import -->
+                    <div class="pt-2 border-t border-slate-800">
+                        <input type="file" id="file-input-txt" accept=".txt,.csv" class="hidden">
+                        <button id="btn-trigger-import-txt" 
+                            class="w-full py-2 bg-slate-900 hover:bg-slate-800 text-cyan-400 border border-slate-700/80 font-medium text-xs rounded-xl flex items-center justify-center gap-2 transition-colors">
+                            <i data-lucide="upload" class="w-4 h-4"></i> Cargar / Importar desde datos .txt
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Live Preview Block -->
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-slate-300">Vista previa del archivo (.txt):</span>
+                        <span id="preview-lines" class="text-[11px] text-slate-400 font-mono">0 filas</span>
+                    </div>
+                    <div class="relative">
+                        <textarea id="txt-preview" readonly rows="5" 
+                            class="w-full p-3 bg-slate-950 font-mono text-[11px] text-slate-300 border border-slate-800 rounded-xl focus:outline-none resize-none leading-relaxed overflow-x-auto whitespace-pre"></textarea>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN RESPALDO COMPLETO CON FOTOS (JSON) -->
+                <div class="bg-slate-850/70 border border-slate-800 rounded-2xl p-4 space-y-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 shrink-0">
+                            <i data-lucide="hard-drive-upload" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-sm font-bold text-slate-100">Respaldo Completo con Fotos (.json)</h2>
+                            <p class="text-xs text-slate-400">Guarda o mueve tu inventario completo incluyendo todas las fotografías</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="btn-export-json" 
+                            class="py-2.5 px-3 bg-purple-900/40 hover:bg-purple-900/60 border border-purple-700/50 text-purple-200 font-semibold text-xs rounded-xl flex items-center justify-center gap-2 transition-all">
+                            <i data-lucide="download-cloud" class="w-4 h-4 text-purple-400"></i> Descargar JSON
+                        </button>
+                        
+                        <input type="file" id="file-input-json" accept=".json" class="hidden">
+                        <button id="btn-import-json" 
+                            class="py-2.5 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold text-xs rounded-xl flex items-center justify-center gap-2 transition-all">
+                            <i data-lucide="folder-open" class="w-4 h-4 text-purple-400"></i> Restaurar JSON
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Reset Data -->
+                <div class="pt-2 text-center">
+                    <button id="btn-reset-data" class="text-xs text-rose-400/80 hover:text-rose-300 underline font-medium">
+                        Vaciar todo el inventario (IndexedDB)
+                    </button>
+                </div>
+
+            </section>
+        </main>
+
+        <!-- Bottom Android Navigation Bar -->
+        <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-slate-900/95 border-t border-slate-800/90 backdrop-blur-md px-3 py-2 z-40">
+            <div class="grid grid-cols-3 gap-1">
+                
+                <button data-tab="inventario" class="nav-tab flex flex-col items-center justify-center py-1.5 px-2 rounded-xl text-gold-400 transition-all">
+                    <i data-lucide="list" class="w-5 h-5 mb-1"></i>
+                    <span class="text-[11px] font-semibold tracking-tight">Inventario</span>
+                </button>
+
+                <button data-tab="nuevo" class="nav-tab flex flex-col items-center justify-center py-1.5 px-2 rounded-xl text-slate-400 hover:text-slate-200 transition-all">
+                    <i data-lucide="plus-circle" class="w-5 h-5 mb-1"></i>
+                    <span class="text-[11px] font-semibold tracking-tight">Nuevo</span>
+                </button>
+
+                <button data-tab="exportar" class="nav-tab flex flex-col items-center justify-center py-1.5 px-2 rounded-xl text-slate-400 hover:text-slate-200 transition-all">
+                    <i data-lucide="file-text" class="w-5 h-5 mb-1"></i>
+                    <span class="text-[11px] font-semibold tracking-tight">Exportar</span>
+                </button>
+
+            </div>
+        </nav>
+
+        <!-- Lightbox Photo Viewer Modal -->
+        <div id="lightbox-modal" class="hidden fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex flex-col justify-between p-4 transition-opacity">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 id="lightbox-title" class="font-bold text-base text-slate-100">Joya</h3>
+                    <p id="lightbox-subtitle" class="text-xs text-slate-400">Detalles</p>
+                </div>
+                <button id="lightbox-close-btn" class="p-2 rounded-full bg-slate-800 text-slate-300 hover:text-white">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <!-- Image preview center -->
+            <div class="flex-1 flex items-center justify-center my-4 overflow-hidden">
+                <img id="lightbox-img" class="max-h-[55vh] w-auto max-w-full object-contain rounded-2xl shadow-2xl border border-slate-800" src="" alt="Ampliada">
+            </div>
+
+            <!-- Details Card -->
+            <div id="lightbox-details" class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 space-y-2 text-xs">
+                <!-- Inserted via JS -->
+            </div>
+        </div>
+
+        <!-- Dynamic Toast Notification -->
+        <div id="toast" class="fixed top-14 left-1/2 -translate-x-1/2 max-w-xs w-full px-4 py-3 bg-slate-800 text-slate-100 border border-slate-700 rounded-2xl shadow-2xl flex items-center gap-3 transition-all transform translate-y-[-100px] opacity-0 z-50 pointer-events-none">
+            <div id="toast-icon-bg" class="w-8 h-8 rounded-full bg-gold-500/20 text-gold-400 flex items-center justify-center shrink-0">
+                <i id="toast-icon" data-lucide="check-circle" class="w-4 h-4"></i>
+            </div>
+            <p id="toast-message" class="text-xs font-medium leading-tight">Acción realizada</p>
+        </div>
+
+        <!-- Custom Delete Modal Dialog -->
+        <div id="delete-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-xs w-full p-4 space-y-4 shadow-2xl">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center shrink-0">
+                        <i data-lucide="trash-2" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-100">¿Eliminar joya?</h3>
+                        <p class="text-xs text-slate-400">Esta acción removerá el producto de tu inventario.</p>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button id="modal-cancel-btn" class="flex-1 py-2 bg-slate-800 text-slate-300 text-xs font-semibold rounded-xl hover:bg-slate-700">Cancelar</button>
+                    <button id="modal-confirm-btn" class="flex-1 py-2 bg-rose-600 text-white text-xs font-bold rounded-xl hover:bg-rose-500">Eliminar</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Application JavaScript Logic -->
+    <script>
+        // IndexedDB Storage Engine
+        const DB_NAME = 'JewelryInventoryDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'jewelry_items';
+        let db = null;
+
+        function initIndexedDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onupgradeneeded = (e) => {
+                    const dbRef = e.target.result;
+                    if (!dbRef.objectStoreNames.contains(STORE_NAME)) {
+                        dbRef.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                    }
+                };
+                request.onsuccess = (e) => {
+                    db = e.target.result;
+                    resolve(db);
+                };
+                request.onerror = (e) => {
+                    console.error("Error al abrir IndexedDB:", e.target.error);
+                    reject(e.target.error);
+                };
+            });
+        }
+
+        function dbGetAll() {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readonly');
+                const store = tx.objectStore(STORE_NAME);
+                const req = store.getAll();
+                req.onsuccess = () => resolve(req.result || []);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        function dbSaveItem(item) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                const req = store.put(item);
+                req.onsuccess = () => resolve(true);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        function dbDeleteItem(id) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                const req = store.delete(id);
+                req.onsuccess = () => resolve(true);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        function dbClearAll() {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                const req = store.clear();
+                req.onsuccess = () => resolve(true);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        function dbBulkSave(items) {
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                items.forEach(item => store.put(item));
+                tx.oncomplete = () => resolve(true);
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
+        // Default Sample Items
+        const SAMPLE_INVENTORY = [
+            {
+                id: 'j-1',
+                estilo: 'Barbada 3x1',
+                largo: '50 cm',
+                ancho: '5 mm',
+                grosor: '2 mm',
+                material: 'Plata 925',
+                genero: 'Unisex',
+                color: 'Plateado',
+                familia: 'Cadena',
+                cantidad: 8,
+                precioCompra: 12500,
+                precioVenta: 24900,
+                foto: ''
+            },
+            {
+                id: 'j-2',
+                estilo: 'Grumet Cubana',
+                largo: '20 cm',
+                ancho: '6 mm',
+                grosor: '2.5 mm',
+                material: 'Oro 18k',
+                genero: 'Hombre',
+                color: 'Dorado',
+                familia: 'Pulsera',
+                cantidad: 3,
+                precioCompra: 85000,
+                precioVenta: 145000,
+                foto: ''
+            },
+            {
+                id: 'j-3',
+                estilo: 'Solitario Circones',
+                largo: '18 mm',
+                ancho: '3 mm',
+                grosor: '1.5 mm',
+                material: 'Plata 925',
+                genero: 'Mujer',
+                color: 'Plateado',
+                familia: 'Anillo',
+                cantidad: 12,
+                precioCompra: 4500,
+                precioVenta: 11900,
+                foto: ''
+            }
+        ];
+
+        // State Store
+        let inventory = [];
+        let currentTab = 'inventario';
+        let currentFamilyFilter = 'TODAS';
+        let deleteCandidateId = null;
+        let currentPhotoBase64 = '';
+
+        // App Launch
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                await initIndexedDB();
+                inventory = await dbGetAll();
+                if (inventory.length === 0) {
+                    await dbBulkSave(SAMPLE_INVENTORY);
+                    inventory = [...SAMPLE_INVENTORY];
+                }
+            } catch (err) {
+                console.error("Error iniciando base de datos IndexedDB", err);
+                inventory = [...SAMPLE_INVENTORY];
+            }
+
+            setupEventListeners();
+            renderUI();
+            lucide.createIcons();
+        });
+
+        // Main UI Render Trigger
+        function renderUI() {
+            renderInventoryList();
+            renderStats();
+            renderTXTPreview();
+        }
+
+        // Money formatting helper
+        function formatMoney(amount) {
+            return new Intl.NumberFormat('es-CL', {
+                style: 'currency',
+                currency: 'CLP',
+                maximumFractionDigits: 0
+            }).format(amount || 0);
+        }
+
+        // Render Cards List
+        function renderInventoryList() {
+            const container = document.getElementById('inventory-list');
+            const emptyState = document.getElementById('empty-state');
+            const searchVal = document.getElementById('search-input').value.toLowerCase().trim();
+
+            const filtered = inventory.filter(item => {
+                const matchesFamily = (currentFamilyFilter === 'TODAS') || (item.familia === currentFamilyFilter);
+                
+                const fullSearchText = [
+                    item.estilo, item.familia, item.material, 
+                    item.color, item.genero, item.largo, item.ancho, item.grosor
+                ].join(' ').toLowerCase();
+
+                const matchesSearch = !searchVal || fullSearchText.includes(searchVal);
+
+                return matchesFamily && matchesSearch;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                emptyState.classList.add('flex');
+            } else {
+                emptyState.classList.add('hidden');
+                emptyState.classList.remove('flex');
+
+                container.innerHTML = filtered.map(item => `
+                    <div class="bg-slate-850 border border-slate-800 rounded-2xl p-3.5 space-y-2.5 shadow-sm hover:border-slate-700 transition-all">
+                        
+                        <!-- Top Row: Thumbnail + Info -->
+                        <div class="flex items-start gap-3">
+                            <!-- Thumbnail (Tapping opens Lightbox) -->
+                            <button onclick="openLightbox('${item.id}')" title="Ver foto ampliada" 
+                                class="w-16 h-16 rounded-xl bg-slate-900 border border-slate-700/80 flex items-center justify-center overflow-hidden shrink-0 relative group">
+                                ${item.foto ? `
+                                    <img src="${item.foto}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" alt="Miniatura">
+                                    <div class="absolute inset-0 bg-slate-950/20 group-hover:bg-transparent transition-colors"></div>
+                                ` : `
+                                    <i data-lucide="gem" class="w-7 h-7 text-gold-400/70"></i>
+                                `}
+                            </button>
+
+                            <!-- Item Details Header -->
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <span class="px-2 py-0.5 rounded-md bg-gold-500/10 border border-gold-500/30 text-gold-400 font-bold text-[10px] tracking-wider uppercase">
+                                        ${escapeHtml(item.familia)}
+                                    </span>
+                                    <span class="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-slate-300 text-[10px] font-semibold">
+                                        ${escapeHtml(item.material)}
+                                    </span>
+                                    <span class="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 text-slate-400 text-[10px]">
+                                        ${escapeHtml(item.genero)}
+                                    </span>
+                                </div>
+                                <h3 class="font-bold text-sm text-slate-100 mt-1 truncate">${escapeHtml(item.estilo)}</h3>
+                            </div>
+
+                            <!-- Actions Menu -->
+                            <div class="flex items-center gap-1 shrink-0">
+                                <button onclick="editItem('${item.id}')" title="Editar" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-gold-400 transition-colors">
+                                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                                </button>
+                                <button onclick="confirmDeleteItem('${item.id}')" title="Eliminar" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-rose-400 transition-colors">
+                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Specs Grid -->
+                        <div class="grid grid-cols-4 gap-1 bg-slate-950/50 p-2 rounded-xl text-[11px] text-slate-400 border border-slate-800/80">
+                            <div>
+                                <span class="block text-[9px] text-slate-500 uppercase">Largo</span>
+                                <span class="font-medium text-slate-200 truncate block">${escapeHtml(item.largo || '-')}</span>
+                            </div>
+                            <div>
+                                <span class="block text-[9px] text-slate-500 uppercase">Ancho</span>
+                                <span class="font-medium text-slate-200 truncate block">${escapeHtml(item.ancho || '-')}</span>
+                            </div>
+                            <div>
+                                <span class="block text-[9px] text-slate-500 uppercase">Grosor</span>
+                                <span class="font-medium text-slate-200 truncate block">${escapeHtml(item.grosor || '-')}</span>
+                            </div>
+                            <div>
+                                <span class="block text-[9px] text-slate-500 uppercase">Color</span>
+                                <span class="font-medium text-slate-200 truncate block">${escapeHtml(item.color || '-')}</span>
+                            </div>
+                        </div>
+
+                        <!-- Price & Live Stock Modifier -->
+                        <div class="flex items-center justify-between pt-1 border-t border-slate-800/70">
+                            <div>
+                                <div class="text-[10px] text-slate-400">P. Compra: <span class="text-slate-300">${formatMoney(item.precioCompra)}</span></div>
+                                <div class="text-xs font-bold text-emerald-400">${formatMoney(item.precioVenta)} <span class="text-[9px] text-slate-500 font-normal">/ u.</span></div>
+                            </div>
+
+                            <!-- Fast Stock Adjust -->
+                            <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-700/80 rounded-xl p-1">
+                                <button onclick="updateStock('${item.id}', -1)" class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 flex items-center justify-center font-bold text-sm">
+                                    -
+                                </button>
+                                <span class="px-2 text-xs font-extrabold text-slate-100 min-w-[24px] text-center">${item.cantidad}</span>
+                                <button onclick="updateStock('${item.id}', 1)" class="w-7 h-7 rounded-lg bg-gold-500/20 hover:bg-gold-500/30 text-gold-400 active:scale-95 flex items-center justify-center font-bold text-sm">
+                                    +
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                `).join('');
+
+                lucide.createIcons();
+            }
+        }
+
+        // Summary Calculations
+        function renderStats() {
+            const totalItems = inventory.length;
+            const totalStock = inventory.reduce((sum, item) => sum + (Number(item.cantidad) || 0), 0);
+            const totalCompra = inventory.reduce((sum, item) => sum + ((Number(item.precioCompra) || 0) * (Number(item.cantidad) || 0)), 0);
+            const totalVenta = inventory.reduce((sum, item) => sum + ((Number(item.precioVenta) || 0) * (Number(item.cantidad) || 0)), 0);
+
+            document.getElementById('header-count').textContent = totalItems;
+            document.getElementById('stat-total-stock').textContent = totalStock;
+            document.getElementById('stat-total-compra').textContent = formatMoney(totalCompra);
+            document.getElementById('stat-total-venta').textContent = formatMoney(totalVenta);
+        }
+
+        // Fast Stock Modify (+ / -)
+        window.updateStock = async function(id, delta) {
+            const idx = inventory.findIndex(item => item.id === id);
+            if (idx !== -1) {
+                const newQty = (inventory[idx].cantidad || 0) + delta;
+                if (newQty >= 0) {
+                    inventory[idx].cantidad = newQty;
+                    await dbSaveItem(inventory[idx]);
+                    renderUI();
+                    showToast(`Stock actualizado (${newQty} uds)`, "check-circle", "gold");
+                }
+            }
+        };
+
+        // IMAGE COMPRESSION ENGINE (HTML5 Canvas Max 500px, 0.75 JPEG)
+        function processAndCompressImage(file) {
+            return new Promise((resolve, reject) => {
+                if (!file || !file.type.startsWith('image/')) {
+                    reject(new Error("El archivo no es una imagen válida"));
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const maxDimension = 500; // max width or height 500px
+                        let w = img.width;
+                        let h = img.height;
+
+                        if (w > maxDimension || h > maxDimension) {
+                            if (w > h) {
+                                h = Math.round((h * maxDimension) / w);
+                                w = maxDimension;
+                            } else {
+                                w = Math.round((w * maxDimension) / h);
+                                h = maxDimension;
+                            }
+                        }
+
+                        const canvas = document.createElement('canvas');
+                        canvas.width = w;
+                        canvas.height = h;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, w, h);
+
+                        // Compress to JPEG with 0.75 quality (~20KB-40KB)
+                        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.75);
+                        resolve(compressedDataUrl);
+                    };
+                    img.onerror = (err) => reject(err);
+                    img.src = e.target.result;
+                };
+                reader.onerror = (err) => reject(err);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Form Submit (Create or Update)
+        document.getElementById('product-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const editId = document.getElementById('field-id').value;
+            const itemData = {
+                id: editId || 'j-' + Date.now(),
+                estilo: document.getElementById('field-estilo').value.trim(),
+                largo: document.getElementById('field-largo').value.trim(),
+                ancho: document.getElementById('field-ancho').value.trim(),
+                grosor: document.getElementById('field-grosor').value.trim(),
+                material: document.getElementById('field-material').value.trim(),
+                genero: document.getElementById('field-genero').value,
+                color: document.getElementById('field-color').value.trim(),
+                familia: document.getElementById('field-familia').value,
+                cantidad: parseInt(document.getElementById('field-cantidad').value, 10) || 0,
+                precioCompra: parseFloat(document.getElementById('field-preciocompra').value) || 0,
+                precioVenta: parseFloat(document.getElementById('field-precioventa').value) || 0,
+                foto: currentPhotoBase64 || ''
+            };
+
+            await dbSaveItem(itemData);
+
+            if (editId) {
+                const index = inventory.findIndex(i => i.id === editId);
+                if (index !== -1) inventory[index] = itemData;
+                showToast("Joya actualizada correctamente", "check-circle", "gold");
+            } else {
+                inventory.unshift(itemData);
+                showToast("Nueva joya guardada en IndexedDB", "check-circle", "gold");
+            }
+
+            resetForm();
+            switchTab('inventario');
+            renderUI();
+        });
+
+        // Edit Item Handler
+        window.editItem = function(id) {
+            const item = inventory.find(i => i.id === id);
+            if (!item) return;
+
+            document.getElementById('field-id').value = item.id;
+            document.getElementById('field-estilo').value = item.estilo || '';
+            document.getElementById('field-largo').value = item.largo || '';
+            document.getElementById('field-ancho').value = item.ancho || '';
+            document.getElementById('field-grosor').value = item.grosor || '';
+            document.getElementById('field-material').value = item.material || '';
+            document.getElementById('field-genero').value = item.genero || 'Unisex';
+            document.getElementById('field-color').value = item.color || '';
+            document.getElementById('field-familia').value = item.familia || 'Cadena';
+            document.getElementById('field-cantidad').value = item.cantidad ?? 1;
+            document.getElementById('field-preciocompra').value = item.precioCompra ?? 0;
+            document.getElementById('field-precioventa').value = item.precioVenta ?? 0;
+
+            // Set Photo preview
+            if (item.foto) {
+                setPhotoPreview(item.foto);
+            } else {
+                clearPhotoPreview();
+            }
+
+            document.getElementById('form-title').textContent = "Editar Joya";
+            document.getElementById('btn-submit-text').textContent = "Guardar Cambios";
+            document.getElementById('btn-cancel-edit').classList.remove('hidden');
+
+            switchTab('nuevo');
+        };
+
+        function setPhotoPreview(dataUrl) {
+            currentPhotoBase64 = dataUrl;
+            const img = document.getElementById('photo-img-preview');
+            const placeholder = document.getElementById('photo-placeholder');
+            const btnRemove = document.getElementById('btn-remove-photo');
+            const statusTag = document.getElementById('photo-status-tag');
+
+            img.src = dataUrl;
+            img.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+            btnRemove.classList.remove('hidden');
+            statusTag.textContent = "Con Foto";
+            statusTag.className = "text-[10px] text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-800";
+        }
+
+        function clearPhotoPreview() {
+            currentPhotoBase64 = '';
+            const img = document.getElementById('photo-img-preview');
+            const placeholder = document.getElementById('photo-placeholder');
+            const btnRemove = document.getElementById('btn-remove-photo');
+            const statusTag = document.getElementById('photo-status-tag');
+
+            img.src = '';
+            img.classList.add('hidden');
+            placeholder.classList.remove('hidden');
+            btnRemove.classList.add('hidden');
+            statusTag.textContent = "Opcional";
+            statusTag.className = "text-[10px] text-slate-400 bg-slate-900 px-2 py-0.5 rounded-full border border-slate-800";
+        }
+
+        function resetForm() {
+            document.getElementById('product-form').reset();
+            document.getElementById('field-id').value = '';
+            clearPhotoPreview();
+            document.getElementById('form-title').textContent = "Agregar Nueva Joya";
+            document.getElementById('btn-submit-text').textContent = "Guardar en Inventario";
+            document.getElementById('btn-cancel-edit').classList.add('hidden');
+        }
+
+        document.getElementById('btn-cancel-edit').addEventListener('click', () => {
+            resetForm();
+            switchTab('inventario');
+        });
+
+        // Photo Input Trigger Handlers
+        document.getElementById('btn-trigger-camera').addEventListener('click', () => {
+            document.getElementById('input-camera').click();
+        });
+
+        document.getElementById('btn-trigger-gallery').addEventListener('click', () => {
+            document.getElementById('input-gallery').click();
+        });
+
+        async function handleImageSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            try {
+                showToast("Comprimiendo imagen...", "camera", "gold");
+                const compressed = await processAndCompressImage(file);
+                setPhotoPreview(compressed);
+                showToast("Foto optimizada con éxito", "check-circle", "emerald");
+            } catch (err) {
+                console.error(err);
+                showToast("Error al procesar la imagen", "alert-circle", "rose");
+            }
+            e.target.value = '';
+        }
+
+        document.getElementById('input-camera').addEventListener('change', handleImageSelect);
+        document.getElementById('input-gallery').addEventListener('change', handleImageSelect);
+        document.getElementById('btn-remove-photo').addEventListener('click', clearPhotoPreview);
+
+        // Lightbox Modal Handling
+        window.openLightbox = function(id) {
+            const item = inventory.find(i => i.id === id);
+            if (!item) return;
+
+            const modal = document.getElementById('lightbox-modal');
+            const img = document.getElementById('lightbox-img');
+            const title = document.getElementById('lightbox-title');
+            const subtitle = document.getElementById('lightbox-subtitle');
+            const details = document.getElementById('lightbox-details');
+
+            title.textContent = item.estilo || 'Joya';
+            subtitle.textContent = `${item.familia} · ${item.material}`;
+            
+            if (item.foto) {
+                img.src = item.foto;
+                img.classList.remove('hidden');
+            } else {
+                img.src = '';
+                img.classList.add('hidden');
+            }
+
+            details.innerHTML = `
+                <div class="grid grid-cols-2 gap-2 text-slate-300">
+                    <div><span class="text-slate-500">Género:</span> ${escapeHtml(item.genero)}</div>
+                    <div><span class="text-slate-500">Color:</span> ${escapeHtml(item.color)}</div>
+                    <div><span class="text-slate-500">Largo:</span> ${escapeHtml(item.largo || 'N/A')}</div>
+                    <div><span class="text-slate-500">Ancho/Grosor:</span> ${escapeHtml(item.ancho || '-')} / ${escapeHtml(item.grosor || '-')}</div>
+                </div>
+                <div class="flex justify-between items-center pt-2 border-t border-slate-800 text-sm">
+                    <div>
+                        <span class="text-xs text-slate-400 block">Stock: <strong class="text-slate-100">${item.cantidad} u.</strong></span>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xs text-slate-400">P. Venta</span>
+                        <div class="text-emerald-400 font-bold">${formatMoney(item.precioVenta)}</div>
+                    </div>
+                </div>
+            `;
+
+            modal.classList.remove('hidden');
+        };
+
+        document.getElementById('lightbox-close-btn').addEventListener('click', () => {
+            document.getElementById('lightbox-modal').classList.add('hidden');
+        });
+
+        // Modal Delete logic
+        window.confirmDeleteItem = function(id) {
+            deleteCandidateId = id;
+            document.getElementById('delete-modal').classList.remove('hidden');
+        };
+
+        document.getElementById('modal-cancel-btn').addEventListener('click', () => {
+            deleteCandidateId = null;
+            document.getElementById('delete-modal').classList.add('hidden');
+        });
+
+        document.getElementById('modal-confirm-btn').addEventListener('click', async () => {
+            if (deleteCandidateId === 'RESET_ALL') {
+                inventory = [];
+                await dbClearAll();
+                renderUI();
+                showToast("Inventario vaciado por completo", "trash-2", "rose");
+            } else if (deleteCandidateId) {
+                inventory = inventory.filter(i => i.id !== deleteCandidateId);
+                await dbDeleteItem(deleteCandidateId);
+                renderUI();
+                showToast("Producto eliminado del inventario", "trash-2", "rose");
+            }
+            deleteCandidateId = null;
+            document.getElementById('delete-modal').classList.add('hidden');
+        });
+
+        // Tab Switcher
+        function switchTab(tabName) {
+            currentTab = tabName;
+
+            ['inventario', 'nuevo', 'exportar'].forEach(name => {
+                const el = document.getElementById(`view-${name}`);
+                if (name === tabName) {
+                    el.classList.remove('hidden');
+                } else {
+                    el.classList.add('hidden');
+                }
+            });
+
+            document.querySelectorAll('.nav-tab').forEach(btn => {
+                const isTarget = btn.getAttribute('data-tab') === tabName;
+                if (isTarget) {
+                    btn.classList.add('text-gold-400');
+                    btn.classList.remove('text-slate-400');
+                } else {
+                    btn.classList.remove('text-gold-400');
+                    btn.classList.add('text-slate-400');
+                }
+            });
+
+            if (tabName === 'exportar') {
+                renderTXTPreview();
+            }
+        }
+
+        // Global Event Listeners Setup
+        function setupEventListeners() {
+            document.querySelectorAll('.nav-tab').forEach(btn => {
+                btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab')));
+            });
+
+            document.getElementById('btn-go-new').addEventListener('click', () => {
+                resetForm();
+                switchTab('nuevo');
+            });
+
+            // Search filter
+            const searchInput = document.getElementById('search-input');
+            const clearBtn = document.getElementById('btn-clear-search');
+
+            searchInput.addEventListener('input', () => {
+                clearBtn.classList.toggle('hidden', searchInput.value.length === 0);
+                renderInventoryList();
+            });
+
+            clearBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                clearBtn.classList.add('hidden');
+                renderInventoryList();
+            });
+
+            // Family Pill Filters
+            document.querySelectorAll('#family-pills button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('#family-pills button').forEach(b => {
+                        b.classList.remove('bg-gold-500', 'text-slate-950', 'font-semibold');
+                        b.classList.add('bg-slate-800', 'text-slate-300');
+                    });
+                    btn.classList.remove('bg-slate-800', 'text-slate-300');
+                    btn.classList.add('bg-gold-500', 'text-slate-950', 'font-semibold');
+
+                    currentFamilyFilter = btn.getAttribute('data-family');
+                    renderInventoryList();
+                });
+            });
+
+            // Radio delimiter change
+            document.querySelectorAll('input[name="delimiter"]').forEach(radio => {
+                radio.addEventListener('change', renderTXTPreview);
+            });
+
+            // TXT Actions
+            document.getElementById('btn-download-txt').addEventListener('click', downloadTXTFile);
+            document.getElementById('btn-copy-txt').addEventListener('click', copyTXTToClipboard);
+            document.getElementById('btn-trigger-import-txt').addEventListener('click', () => {
+                document.getElementById('file-input-txt').click();
+            });
+            document.getElementById('file-input-txt').addEventListener('change', handleImportTXTFile);
+
+            // JSON Backup Actions
+            document.getElementById('btn-export-json').addEventListener('click', downloadJSONBackup);
+            document.getElementById('btn-import-json').addEventListener('click', () => {
+                document.getElementById('file-input-json').click();
+            });
+            document.getElementById('file-input-json').addEventListener('change', handleImportJSONFile);
+
+            // Reset All
+            document.getElementById('btn-reset-data').addEventListener('click', () => {
+                if (inventory.length === 0) return;
+                deleteCandidateId = 'RESET_ALL';
+                document.getElementById('delete-modal').classList.remove('hidden');
+            });
+        }
+
+        // EXPORT TXT GENERATOR (11 FIELDS CLEAN, NO BASE64 IMAGE TEXT)
+        function generateTXTContent() {
+            const delimiterChoice = document.querySelector('input[name="delimiter"]:checked')?.value || 'tab';
+            const sep = delimiterChoice === 'semicolon' ? ';' : '\t';
+
+            // 11 Headers
+            const headers = [
+                'Estilo',
+                'Largo',
+                'Ancho',
+                'Grosor',
+                'Material',
+                'Género',
+                'Color',
+                'Familia',
+                'Cantidad',
+                'Precio Compra',
+                'Precio Venta'
+            ];
+
+            let rows = [headers.join(sep)];
+
+            inventory.forEach(item => {
+                const row = [
+                    item.estilo || '',
+                    item.largo || '',
+                    item.ancho || '',
+                    item.grosor || '',
+                    item.material || '',
+                    item.genero || '',
+                    item.color || '',
+                    item.familia || '',
+                    item.cantidad ?? 0,
+                    item.precioCompra ?? 0,
+                    item.precioVenta ?? 0
+                ];
+                rows.push(row.join(sep));
+            });
+
+            return rows.join('\r\n');
+        }
+
+        function renderTXTPreview() {
+            const text = generateTXTContent();
+            const previewEl = document.getElementById('txt-preview');
+            const linesEl = document.getElementById('preview-lines');
+            previewEl.value = text;
+            const lineCount = inventory.length + (inventory.length > 0 ? 1 : 0);
+            linesEl.textContent = `${lineCount} filas`;
+        }
+
+        function downloadTXTFile() {
+            if (inventory.length === 0) {
+                showToast("El inventario está vacío", "alert-circle", "rose");
+                return;
+            }
+
+            const txtContent = generateTXTContent();
+            const blob = new Blob(['\uFEFF' + txtContent], { type: 'text/plain;charset=utf-8' });
+            
+            const link = document.createElement('a');
+            const dateStr = new Date().toISOString().slice(0, 10);
+            link.href = URL.createObjectURL(blob);
+            link.download = `inventario_joyeria_${dateStr}.txt`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showToast("Archivo .txt generado para Excel", "download", "emerald");
+        }
+
+        function copyTXTToClipboard() {
+            const txtContent = generateTXTContent();
+            try {
+                const tempTextArea = document.createElement('textarea');
+                tempTextArea.value = txtContent;
+                document.body.appendChild(tempTextArea);
+                tempTextArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(tempTextArea);
+                showToast("Texto copiado al portapapeles", "copy", "gold");
+            } catch (err) {
+                showToast("No se pudo copiar automáticamente", "alert-circle", "rose");
+            }
+        }
+
+        function handleImportTXTFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(evt) {
+                try {
+                    let content = evt.target.result;
+                    if (content.startsWith('\uFEFF')) {
+                        content = content.substring(1);
+                    }
+
+                    const lines = content.split(/\r?\n/).filter(line => line.trim() !== '');
+                    if (lines.length < 2) {
+                        showToast("El archivo no tiene suficientes filas", "alert-circle", "rose");
+                        return;
+                    }
+
+                    const firstLine = lines[0];
+                    let sep = '\t';
+                    if (firstLine.includes(';') && !firstLine.includes('\t')) {
+                        sep = ';';
+                    }
+
+                    const newItems = [];
+                    for (let i = 1; i < lines.length; i++) {
+                        const cols = lines[i].split(sep).map(c => c.trim());
+                        if (cols.length >= 8) {
+                            newItems.push({
+                                id: 'j-' + (Date.now() + i),
+                                estilo: cols[0] || 'Sin estilo',
+                                largo: cols[1] || '',
+                                ancho: cols[2] || '',
+                                grosor: cols[3] || '',
+                                material: cols[4] || 'Plata 925',
+                                genero: cols[5] || 'Unisex',
+                                color: cols[6] || 'Plateado',
+                                familia: cols[7] || 'Cadena',
+                                cantidad: parseInt(cols[8], 10) || 0,
+                                precioCompra: parseFloat(cols[9]) || 0,
+                                precioVenta: parseFloat(cols[10]) || 0,
+                                foto: ''
+                            });
+                        }
+                    }
+
+                    if (newItems.length > 0) {
+                        inventory = newItems;
+                        await dbClearAll();
+                        await dbBulkSave(inventory);
+                        renderUI();
+                        switchTab('inventario');
+                        showToast(`Importadas ${newItems.length} joyas desde .txt`, "check-circle", "emerald");
+                    } else {
+                        showToast("No se encontraron registros válidos", "alert-circle", "rose");
+                    }
+
+                } catch (err) {
+                    console.error(err);
+                    showToast("Error al leer el archivo .txt", "alert-circle", "rose");
+                }
+                e.target.value = '';
+            };
+
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        // FULL JSON BACKUP WITH PHOTOS
+        function downloadJSONBackup() {
+            if (inventory.length === 0) {
+                showToast("Sin productos para respaldar", "alert-circle", "rose");
+                return;
+            }
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(inventory, null, 2));
+            const downloadAnchor = document.createElement('a');
+            const dateStr = new Date().toISOString().slice(0, 10);
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `respaldo_joyeria_fotos_${dateStr}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+
+            showToast("Respaldo JSON descargado con fotos", "download-cloud", "emerald");
+        }
+
+        function handleImportJSONFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(evt) {
+                try {
+                    const parsed = JSON.parse(evt.target.result);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        inventory = parsed;
+                        await dbClearAll();
+                        await dbBulkSave(inventory);
+                        renderUI();
+                        switchTab('inventario');
+                        showToast(`Respaldo de ${parsed.length} joyas con fotos restaurado`, "check-circle", "emerald");
+                    } else {
+                        showToast("Formato de JSON inválido o vacío", "alert-circle", "rose");
+                    }
+                } catch (err) {
+                    console.error(err);
+                    showToast("Error al procesar el archivo JSON", "alert-circle", "rose");
+                }
+                e.target.value = '';
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        // Toast System
+        let toastTimeout = null;
+        function showToast(message, iconName = 'check-circle', color = 'gold') {
+            const toast = document.getElementById('toast');
+            const msgEl = document.getElementById('toast-message');
+            const iconBg = document.getElementById('toast-icon-bg');
+            const iconEl = document.getElementById('toast-icon');
+
+            msgEl.textContent = message;
+            iconEl.setAttribute('data-lucide', iconName);
+            lucide.createIcons();
+
+            if (color === 'emerald') {
+                iconBg.className = 'w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0';
+            } else if (color === 'rose') {
+                iconBg.className = 'w-8 h-8 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0';
+            } else {
+                iconBg.className = 'w-8 h-8 rounded-full bg-gold-500/20 text-gold-400 flex items-center justify-center shrink-0';
+            }
+
+            toast.classList.remove('translate-y-[-100px]', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.add('translate-y-[-100px]', 'opacity-0');
+                toast.classList.remove('translate-y-0', 'opacity-100');
+            }, 3000);
+        }
+
+        function escapeHtml(str) {
+            return String(str || '').replace(/[&<>"']/g, function(m) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                }[m];
+            });
+        }
+    </script>
+</body>
+</html>
